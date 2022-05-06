@@ -1,0 +1,5 @@
+The covid-19 data download from WHO until April 13th (https://covid19.who.int/table) and the world map geojson file comes from the internet. (https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson) 
+There are some missing data and useless data. 
+I use functions provided by javascript to omit global data and use 0 to substitute missing data. Covid-19 data and map data use different names for serval countries and areas. I download ISO 3166-1 (Codes for the representation of names of countries and their subdivisions) use “Alpha-3 code” for each country to merge two datasets. There are still some areas without people in geojson file.
+I use d3-tip to achieve one of interactions and reference a d3tip.css. 
+I use d3-tip.js to achieve the function that every time when mouse on a country or an area it will tip the specific data about this country. I chose a gentle color blue for cases and red for deaths. However, I fail to find a classification standard and just use maximum number and minimum number in data to decide colour scale.

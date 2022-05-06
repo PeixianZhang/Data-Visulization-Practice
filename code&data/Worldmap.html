@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>World Map</title>
+    <link rel="stylesheet" href="d3tip.css">
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <script src="d3-tip.js"></script>
+
+    <style>
+        path {
+            fill:none;
+            stroke-width: 1px;
+            stroke: #222222;
+        }
+        h1{
+            width:75%;
+            height:20px;
+            float:right;
+            background: white;
+        }
+        #note{
+            width:100%;
+            font-size: 120%;
+            height:100px;
+            float:right;
+            background-color:lightgray;
+        }
+    </style>
+    <h1 >Covid-19 Confirmed Cases and Deaths Overview</h1>
+
+</head>
+<body>
+
+<form name="single" action="" method=""  style="position:absolute;top:130px;left:60px;">
+    <p>Select key for map:</p>
+    <select id="mySelect"   style = "height:25px;font-size:15px;border-radius:10px">
+        <option   value="cases">Confirmed Cases</option>
+        <option   value="deaths">Deathes</option>
+    </select>
+</form>
+
+
+<svg width="1200" height="900">
+    <g id="mapLayer"></g>
+</svg>
+<script type="text/javascript">
+    //var mySelect=document.getElementById("mySelect").value="deathes"
+
+    async function choropleth(mySelect) {
+        let svg = d3.select("svg")
+        let width = parseInt(svg.attr("width"))
+        let height = parseInt(svg.attr("height"))
+
+        var mySelect = document.getElementById("mySelect").value = "cases"
+
+        function Select() {
+            var mySelect = document.getElementById('mySelect').value
+            return mySelect;
+        };
+
+
+        let projection = d3.geoNaturalEarth1()
+            .translate([width / 2, height / 2])
+            //.center([0,20])
+            .scale(width / 1.6 / Math.PI);
+
+        let path = d3.geoPath()
+            .projection(projection);
+
+        let json = await d3.json("world.geojson");
+
+        let covid_data = await d3.csv("WHO data.csv");
+        covid_data = covid_data.filter(d => d["name"] !== "Global");
+
+
+
+        let dataLookup = {};
+        let numObject = {};
+        covid_data.forEach(function (datarow) {
+            numObject = {
+                "cases": parseFloat(datarow['Cases - cumulative total']),
+                "deaths": parseFloat(datarow["Deaths - cumulative total"])
+            };
+            dataLookup[datarow.name] = numObject;
+        });
+
+
+        json.features.forEach(function (feature) {
+            feature.properties.value = dataLookup[feature.properties.name];
+            //color.range(d3.schemeReds[4])
+        });
+
+        var tip = d3.tip().attr("class", "d3-tip").html(function (d) {
+            //return d.properties.value
+            return "<strong>Country:</strong> <span>" + d.properties.name + "</span><br>" +
+                "<strong>Confirmed cases:</strong> <span>" + d.properties.value["cases"] + "</span><br>" +
+                "<strong>Deathes:</strong> <span>" + d.properties.value["deaths"]+ "</span>"
+            //return d.properties.name;
+        })
+        svg.call(tip);
+
+
+        var canvas = d3.select("#mapLayer").selectAll("path")
+            .data(json.features)
+            .join("path")
+            .attr("d", path)
+            .on("mouseover", function (d) {
+                //console.log(d)
+                tip.show(d)
+                d3.select(this)
+                    //.attr('opacity',0.5)
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 6);
+            })
+            .on("mouseout", function (d) {
+                tip.hide(d)
+                d3.select(this)
+                    //.attr("opacity",1)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 1);
+            })
+
+            //.style("fill","none")
+            .style("fill", function (d) {
+                if(mySelect=="cases") {
+                    var colorrange = d3.schemeBlues[8]
+                } else {
+                    colorrange=d3.schemeReds[8]
+                }
+                let color = d3.scaleQuantize()
+                    //.domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
+                    .domain([
+                        d3.min(Object.values(dataLookup), function (d) {
+                            //console.log(selectFunction());
+                            return +d[mySelect] || 0;
+                        }),
+                        d3.max(Object.values(dataLookup), function (d) {
+                            return parseFloat(d[mySelect] || 0);
+                        })
+                    ])
+                    .range(colorrange);
+                let data = d.properties.value || 0;
+                return color(data[mySelect]);
+                //return "#222"
+
+            });
+
+
+        function colorChange(select){
+            canvas.style("fill",function(d){
+                if(mySelect=="cases") {
+                    var colorrange = d3.schemeBlues[8]
+                } else {
+                    colorrange=d3.schemeReds[8]
+                }
+                let color = d3.scaleQuantize()
+                    //.domain([100000, 1000000, 10000000, 30000000, 100000000, 500000000])
+                    .domain([
+                        d3.min(Object.values(dataLookup), function (d) {
+                            //console.log(selectFunction());
+                            return +d[mySelect] || 0;
+                        }),
+                        d3.max(Object.values(dataLookup), function (d) {
+                            return parseFloat(d[mySelect] || 0);
+                        })
+                    ])
+                    .range(colorrange);
+                let data = d.properties.value || 0;
+
+                return color(data[select]);
+            })
+        }
+
+
+
+        d3.selectAll("#mySelect")
+            .on("change",function (){
+                mySelect=document.getElementById("mySelect").value
+                colorChange(mySelect);
+                console.log(color.domain())
+            });
+    };
+
+    choropleth();
+
+</script>
+
+<nav id="note">
+    <li> data from <a href="https://covid19.who.int/table">WHO</a> until April 13th</li>
+    <li> geojson data from the Internet</li>
+    <li> "tip" function refer to <a herf="https://github.com/caged/d3-tip">d3-tip</a></li>
+    <li> design by Peixian Zhang</li>
+    <br></nav>
+
+</body>
+</html>
