@@ -1,2 +1,2 @@
 # Data-Visulization-Practice
-This is a practice work from KCL. 
+This is a data visulization practice work by d3.js.
